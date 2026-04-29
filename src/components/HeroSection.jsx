@@ -112,6 +112,9 @@ export default function HeroSection({
                     alt="Hero Background"
                     loading="lazy"
                     className="absolute inset-0 w-full h-full object-cover z-0"
+                    onError={(e) => {
+                        e.target.style.display = 'none';
+                    }}
                 />
             )}
 

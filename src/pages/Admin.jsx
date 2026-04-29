@@ -1,54 +1,56 @@
 import { useState, useEffect, useRef } from 'react';
-import { FiLock, FiMail, FiLogIn, FiAlertCircle, FiEye, FiEyeOff } from 'react-icons/fi';
+import {
+    FiLock,
+    FiMail,
+    FiLogIn,
+    FiAlertCircle,
+    FiEye,
+    FiEyeOff
+} from 'react-icons/fi';
 import { LuSparkles } from 'react-icons/lu';
 import BlogManager from 'components/BlogManager';
 import gsap from 'gsap';
+import { adminLogin, adminLogout } from '../api/adminApi';
 
 const AdminLogin = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
+
     const [formData, setFormData] = useState({
-        username: '',
+        email: '',
         password: ''
     });
-    const [isClient, setIsClient] = useState(false);
 
     const loginCardRef = useRef(null);
     const errorRef = useRef(null);
     const spinnerRef = useRef(null);
 
     useEffect(() => {
-        setIsClient(true);
+        const token = localStorage.getItem('admin_token');
+
+        if (token) {
+            setIsAuthenticated(true);
+        }
     }, []);
 
     useEffect(() => {
-        if (isClient) {
-            try {
-                const token = localStorage.getItem('admin-token');
-                setIsAuthenticated(!!token);
-            } catch (error) {
-                console.error('Error accessing localStorage:', error);
-                setIsAuthenticated(false);
-            }
-        }
-    }, [isClient]);
-
-    useEffect(() => {
-        if (loginCardRef.current && !isAuthenticated && isClient) {
-            gsap.fromTo(loginCardRef.current,
+        if (loginCardRef.current && !isAuthenticated) {
+            gsap.fromTo(
+                loginCardRef.current,
                 { opacity: 0, y: 20 },
-                { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }
+                { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' }
             );
         }
-    }, [isAuthenticated, isClient]);
+    }, [isAuthenticated]);
 
     useEffect(() => {
         if (error && errorRef.current) {
-            gsap.fromTo(errorRef.current,
+            gsap.fromTo(
+                errorRef.current,
                 { opacity: 0, y: -10 },
-                { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" }
+                { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' }
             );
         }
     }, [error]);
@@ -59,7 +61,7 @@ const AdminLogin = () => {
                 rotation: 360,
                 duration: 1,
                 repeat: -1,
-                ease: "linear"
+                ease: 'linear'
             });
         }
     }, [isLoading]);
@@ -69,58 +71,55 @@ const AdminLogin = () => {
             ...formData,
             [e.target.name]: e.target.value
         });
+
         setError('');
     };
 
     const handleLogin = async (e) => {
         e.preventDefault();
+
         setIsLoading(true);
         setError('');
 
         try {
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    username: formData.username,
-                    password: formData.password
-                })
-            });
+            const result = await adminLogin(formData.email, formData.password);
 
-            const data = await response.json();
+            // The API response embeds the token inside result.data
+            const token = result.data?.token || result.token;
+            const adminUser = result.data?.admin || result.admin;
 
-            if (response.ok) {
-                localStorage.setItem('admin-token', data.token);
-                localStorage.setItem('admin-user', JSON.stringify(data));
+            if (token) {
+                localStorage.setItem('admin_token', token);
+                localStorage.setItem('admin_data', JSON.stringify(adminUser || { email: formData.email, role: 'admin' }));
                 setIsAuthenticated(true);
-                setError('');
             } else {
-                setError(data.message || 'Login failed. Please try again.');
+                setError('Invalid response from server.');
             }
-        } catch (error) {
-            console.error('Login error:', error);
-            setError('Connection error. Is the backend running?');
+        } catch (err) {
+            console.error('Login error:', err);
+            setError(
+                err.response?.data?.message ||
+                err.response?.data?.error ||
+                'Invalid credentials. Please check your email and password.'
+            );
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
         try {
-            localStorage.removeItem('admin-token');
-            localStorage.removeItem('admin-user');
-        } catch (error) {
-            console.error('Error removing from localStorage:', error);
-        }
-        setIsAuthenticated(false);
-        setFormData({ username: '', password: '' });
-    };
+            await adminLogout();
+        } catch (err) {
+            // Ignore backend errors, always logout locally
+        } finally {
+            localStorage.removeItem('admin_token');
+            localStorage.removeItem('admin_data');
 
-    if (!isClient) {
-        return null;
-    }
+            setIsAuthenticated(false);
+            setFormData({ email: '', password: '' });
+        }
+    };
 
     if (isAuthenticated) {
         return (
@@ -130,8 +129,11 @@ const AdminLogin = () => {
                         <div className="flex justify-between items-center">
                             <div className="flex items-center space-x-2">
                                 <LuSparkles className="text-2xl text-white" />
-                                <span className=" text-xl">Admin Dashboard</span>
+                                <span className="text-xl">
+                                    Admin Dashboard
+                                </span>
                             </div>
+
                             <button
                                 onClick={handleLogout}
                                 className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-sm flex items-center border border-gray-700"
@@ -153,7 +155,8 @@ const AdminLogin = () => {
             <div
                 className="absolute inset-0 opacity-10"
                 style={{
-                    backgroundImage: `radial-gradient(circle at 1px 1px, #000000 1px, transparent 0)`,
+                    backgroundImage:
+                        'radial-gradient(circle at 1px 1px, #000000 1px, transparent 0)',
                     backgroundSize: '30px 30px'
                 }}
             />
@@ -169,9 +172,11 @@ const AdminLogin = () => {
                     <div className="inline-block p-3 bg-gradient-to-br from-gray-900/5 to-gray-600/5 rounded-2xl mb-4 border border-gray-100">
                         <LuSparkles className="text-3xl text-gray-900" />
                     </div>
-                    <h1 className=" text-3xl text-gray-900 mb-2">
+
+                    <h1 className="text-3xl text-gray-900 mb-2">
                         Admin <span className="text-gray-500">Access</span>
                     </h1>
+
                     <p className="text-gray-500 text-sm">
                         Enter your credentials to manage blog posts
                     </p>
@@ -190,17 +195,19 @@ const AdminLogin = () => {
                 <form onSubmit={handleLogin} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-600 mb-2">
-                            Username
+                            Email
                         </label>
+
                         <div className="relative">
                             <FiMail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+
                             <input
-                                type="text"
-                                name="username"
-                                value={formData.username}
+                                type="email"
+                                name="email"
+                                value={formData.email}
                                 onChange={handleChange}
                                 required
-                                placeholder="Admin Username"
+                                placeholder="admin@example.com"
                                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-colors bg-white text-gray-900 placeholder-gray-400"
                             />
                         </div>
@@ -210,8 +217,10 @@ const AdminLogin = () => {
                         <label className="block text-sm font-medium text-gray-600 mb-2">
                             Password
                         </label>
+
                         <div className="relative">
                             <FiLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+
                             <input
                                 type={showPassword ? 'text' : 'password'}
                                 name="password"
@@ -221,28 +230,21 @@ const AdminLogin = () => {
                                 placeholder="••••••••"
                                 className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-colors bg-white text-gray-900 placeholder-gray-400"
                             />
+
                             <button
                                 type="button"
-                                onClick={() => setShowPassword(!showPassword)}
+                                onClick={() =>
+                                    setShowPassword(!showPassword)
+                                }
                                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                             >
-                                {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                                {showPassword ? (
+                                    <FiEyeOff size={18} />
+                                ) : (
+                                    <FiEye size={18} />
+                                )}
                             </button>
                         </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                        <label className="flex items-center">
-                            <input type="checkbox" className="w-4 h-4 text-gray-900 border-gray-300 rounded focus:ring-gray-900" />
-                            <span className="ml-2 text-sm text-gray-600">Remember me</span>
-                        </label>
-                        <button
-                            type="button"
-                            onClick={() => alert(`Please contact technical support to reset your password.`)}
-                            className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
-                        >
-                            Forgot password?
-                        </button>
                     </div>
 
                     <button
@@ -265,7 +267,8 @@ const AdminLogin = () => {
                 </form>
 
                 <p className="text-center text-xs text-gray-400 mt-6">
-                    © {new Date().getFullYear()} RidenTech. All rights reserved.
+                    © {new Date().getFullYear()} RidenTech.
+                    All rights reserved.
                 </p>
             </div>
         </div>

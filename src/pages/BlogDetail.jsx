@@ -4,7 +4,8 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Calendar, MessageCircle, Clock, Twitter, Facebook, Linkedin, Copy, Check, User } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { dummyBlogs } from '../data/blogsData';
+import { getPublicPost } from '../api/blogApi';
+import MarkdownRenderer from "../components/MarkdownRenderer";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -13,12 +14,33 @@ export default function BlogPostPage() {
     const [post, setPost] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
 
+    const normalizePost = (post) => ({
+        ...post,
+        imageUrl: post.featured_image_url || post.featured_image || post.imageUrl || '',
+        category: post.category?.name || post.category || '',
+        status: (post.status || '').toLowerCase(),
+        readTime: post.read_time || post.readTime || 0,
+        createdAt: post.created_at || post.createdAt,
+        metaDescription: post.meta_description || post.metaDescription || '',
+    });
+
     useEffect(() => {
         const fetchPost = async () => {
             try {
-                const data = dummyBlogs.find(b => b.slug === slug);
+                const response = await getPublicPost(slug);
+                let data = null;
+
+                if (response?.post) data = response.post;
+                else if (response?.data) data = response.data;
+                else data = response;
+
+                // Handles Laravel nested .data object wrappers
+                if (data && data.data && typeof data.data === 'object' && !Array.isArray(data.data)) {
+                    data = data.data;
+                }
+
                 if (data) {
-                    setPost(data);
+                    setPost(normalizePost(data));
                 }
             } catch (error) {
                 console.error('Fetch error:', error);
@@ -215,14 +237,19 @@ export default function BlogPostPage() {
                         src={post.imageUrl || '/img-placeholder.jpg'}
                         alt={post.title}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='400' viewBox='0 0 800 400'%3E%3Crect fill='%23f3f4f6' width='800' height='400'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-family='sans-serif' font-size='20'%3EImage Not Found%3C/text%3E%3C/svg%3E";
+                        }}
                     />
                 </div>
 
                 <div
                     ref={contentRef}
-                    className="prose prose-lg max-w-none  text-gray-700 mb-12"
-                    dangerouslySetInnerHTML={{ __html: post.content }}
-                />
+                    className="max-w-none text-gray-700 mb-12"
+                >
+                    <MarkdownRenderer content={post.content} />
+                </div>
 
                 <div ref={authorRef} className="flex items-start gap-6 p-8 bg-gray-50 rounded-2xl mb-12">
                     <div className="relative w-20 h-20 rounded-full overflow-hidden bg-gray-900 flex items-center justify-center flex-shrink-0 text-white shadow-lg">

@@ -4,7 +4,7 @@ import { ArrowRight, Calendar, Search } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import HeroSection from 'components/HeroSection';
-import { dummyBlogs } from '../data/blogsData';
+import { getPublicPosts } from '../api/blogApi';
 gsap.registerPlugin(ScrollTrigger);
 
 export default function BlogPage() {
@@ -17,11 +17,30 @@ export default function BlogPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [categories, setCategories] = useState(["All"]);
 
+    const normalizePost = (post) => ({
+        ...post,
+        imageUrl: post.featured_image_url || post.featured_image || post.imageUrl || '',
+        category: post.category?.name || post.category || '',
+        status: (post.status || '').toLowerCase(),
+        readTime: post.read_time || post.readTime || 0,
+        createdAt: post.created_at || post.createdAt,
+    });
+
     useEffect(() => {
         const fetchBlogs = async () => {
             try {
-                const data = dummyBlogs;
-                const publishedBlogs = data.filter(b => b.status === 'published');
+                const response = await getPublicPosts();
+
+                let extracted = [];
+                if (Array.isArray(response)) extracted = response;
+                else if (response?.posts && Array.isArray(response.posts)) extracted = response.posts;
+                else if (response?.data) {
+                    if (Array.isArray(response.data)) extracted = response.data;
+                    else if (response.data.data && Array.isArray(response.data.data)) extracted = response.data.data;
+                }
+
+                const normalized = extracted.map(normalizePost);
+                const publishedBlogs = normalized.filter(b => b.status === 'published');
                 setBlogs(publishedBlogs);
 
                 // Extract unique categories
@@ -39,8 +58,18 @@ export default function BlogPage() {
 
     const stripHtml = (html) => {
         if (!html) return "";
+        // First strip markdown-like symbols
+        let text = html
+            .replace(/^#+\s+/gm, '') // headings
+            .replace(/\*\*/g, '')    // bold
+            .replace(/\*/g, '')     // italic
+            .replace(/!\[.*?\]\(.*?\)/g, '') // images
+            .replace(/\[(.*?)\]\(.*?\)/g, '$1') // links
+            .replace(/^- /gm, '')    // bullets
+            .replace(/^\d+\.\s/gm, ''); // numbered lists
+
         const tmp = document.createElement("DIV");
-        tmp.innerHTML = html;
+        tmp.innerHTML = text;
         return tmp.textContent || tmp.innerText || "";
     };
 
@@ -183,9 +212,13 @@ export default function BlogPage() {
                                                         src={post.imageUrl || '/img-placeholder.jpg'}
                                                         alt={post.title}
                                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                                        onError={(e) => {
+                                                            e.target.onerror = null;
+                                                            e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200' viewBox='0 0 400 200'%3E%3Crect fill='%23f3f4f6' width='400' height='200'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-family='sans-serif' font-size='14'%3ENo Image%3C/text%3E%3C/svg%3E";
+                                                        }}
                                                     />
                                                     <div className="absolute top-4 left-4">
-                                                        <span className="px-3 py-1 bg-accent backdrop-blur-sm text-white text-xs  font-semibold uppercase tracking-wider rounded-full shadow-lg">
+                                                        <span className="px-3 py-1 bg-accent text-white text-xs  font-semibold uppercase tracking-wider rounded-full shadow-sm">
                                                             {post.category || 'General'}
                                                         </span>
                                                     </div>
@@ -198,14 +231,11 @@ export default function BlogPage() {
                                                             <span className="text-sm ">{date.day} {date.month}, {date.year}</span>
                                                         </div>
                                                     </div>
-
-                                                    <h3 className=" text-xl font-semibold text-gray-900 mb-3 line-clamp-2 group-hover:text-gray-700 transition-colors duration-300">
+                                                    <h3 className=" text-xl font-semibold text-gray-900 mb-3 line-clamp-1 group-hover:text-gray-700 transition-colors duration-300">
                                                         {post.title}
                                                     </h3>
 
-                                                    <p className=" text-gray-600 text-sm mb-4 line-clamp-2">
-                                                        {stripHtml(post.content)}
-                                                    </p>
+
 
                                                     <div className="flex items-left justify-between mt-4 pt-4 border-t border-gray-100">
                                                         <div className="flex items-center gap-1  transition-colors duration-300">

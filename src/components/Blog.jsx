@@ -4,7 +4,7 @@ import { ArrowRight, ArrowUpRight, Calendar, Clock, ChevronLeft, ChevronRight, Z
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Draggable } from "gsap/Draggable";
-import { dummyBlogs } from '../data/blogsData';
+import { getPublicPosts } from '../api/blogApi';
 
 gsap.registerPlugin(ScrollTrigger, Draggable);
 
@@ -31,11 +31,30 @@ export default function Blog() {
   const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
 
+  const normalizePost = (post) => ({
+    ...post,
+    imageUrl: post.featured_image_url || post.featured_image || post.imageUrl || '',
+    category: post.category?.name || post.category || '',
+    status: (post.status || '').toLowerCase(),
+    readTime: post.read_time || post.readTime || 0,
+    createdAt: post.created_at || post.createdAt,
+  });
+
   useEffect(() => {
     const fetchBlogs = async () => {
       try {
-        const data = dummyBlogs;
-        const published = data.filter(b => b.status === 'published');
+        const response = await getPublicPosts();
+
+        let extracted = [];
+        if (Array.isArray(response)) extracted = response;
+        else if (response?.posts && Array.isArray(response.posts)) extracted = response.posts;
+        else if (response?.data) {
+          if (Array.isArray(response.data)) extracted = response.data;
+          else if (response.data.data && Array.isArray(response.data.data)) extracted = response.data.data;
+        }
+
+        const normalized = extracted.map(normalizePost);
+        const published = normalized.filter(b => b.status === 'published');
         setBlogs(published.slice(0, 6));
       } catch (error) {
         console.error('Fetch error:', error);
@@ -57,8 +76,18 @@ export default function Blog() {
 
   const stripHtml = (html) => {
     if (!html) return "";
+    // First strip markdown-like symbols
+    let text = html
+      .replace(/^#+\s+/gm, '') // headings
+      .replace(/\*\*/g, '')    // bold
+      .replace(/\*/g, '')     // italic
+      .replace(/!\[.*?\]\(.*?\)/g, '') // images
+      .replace(/\[(.*?)\]\(.*?\)/g, '$1') // links
+      .replace(/^- /gm, '')    // bullets
+      .replace(/^\d+\.\s/gm, ''); // numbered lists
+
     const tmp = document.createElement("DIV");
-    tmp.innerHTML = html;
+    tmp.innerHTML = text;
     return tmp.textContent || tmp.innerText || "";
   };
 
@@ -113,7 +142,7 @@ export default function Blog() {
     updateScrollLength();
     window.addEventListener("resize", updateScrollLength);
     return () => window.removeEventListener("resize", updateScrollLength);
-  }, [isMobile, isTablet, mounted, currentPosition]);
+  }, [isMobile, isTablet, mounted, currentPosition, blogs, isLoading]);
 
   // Handle side button navigation
   const scrollTo = (direction) => {
@@ -280,7 +309,7 @@ export default function Blog() {
         if (t.trigger === section || t.pin === pinContainer) t.kill();
       });
     };
-  }, [scrollLength, isMobile, isTablet, mounted]);
+  }, [scrollLength, isMobile, isTablet, mounted, blogs, isLoading]);
 
   if (!mounted) return (
     <section
@@ -374,17 +403,21 @@ export default function Blog() {
                         src={post.imageUrl || '/img-placeholder.jpg'}
                         alt={post.title}
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200' viewBox='0 0 400 200'%3E%3Crect fill='%23f3f4f6' width='400' height='200'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-family='sans-serif' font-size='14'%3ENo Image%3C/text%3E%3C/svg%3E";
+                        }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-60"></div>
                       <div className="absolute top-4 right-4 z-10">
-                        <span className="px-3 py-1.5 bg-accent text-white text-xs   font-semibold uppercase tracking-wider rounded-full shadow-lg ">
+                        <span className="px-3 py-1.5 bg-white/90 backdrop-blur-sm text-gray-800 text-xs   font-semibold uppercase tracking-wider rounded-full shadow-sm ">
                           {post.category || 'General'}
                         </span>
                       </div>
                     </div>
 
                     {/* CONTENT */}
-                    <div className="p-6 flex flex-col h-[220px]">
+                    <div className="p-6 flex flex-col h-[180px]">
                       <div className="flex items-center gap-4 mb-4 text-gray-500 text-sm  ">
                         <div className="flex items-center gap-1.5">
                           <Calendar className="w-4 h-4" />
@@ -396,13 +429,11 @@ export default function Blog() {
                         {post.title}
                       </h3>
 
-                      <p className=" text-gray-600 text-sm mb-5 line-clamp-2 leading-relaxed flex-grow">
-                        {stripHtml(post.content)}
-                      </p>
+
 
                       <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
-                        <div className="flex items-center gap-1 text-gray-600 group-hover:text-gray-900 transition-colors duration-300">
-                          <span className="  text-sm font-medium">Read</span>
+                        <div className="flex items-center gap-1 text-gray-700 group-hover:text-gray-900 transition-colors duration-300">
+                          <span className="  text-sm font-medium">Read More</span>
                           <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
                         </div>
                       </div>
@@ -504,6 +535,10 @@ export default function Blog() {
                           src={post.imageUrl || '/img-placeholder.jpg'}
                           alt={post.title}
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200' viewBox='0 0 400 200'%3E%3Crect fill='%23f3f4f6' width='400' height='200'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-family='sans-serif' font-size='14'%3ENo Image%3C/text%3E%3C/svg%3E";
+                          }}
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
                         <div className="absolute top-3 left-3 z-10">

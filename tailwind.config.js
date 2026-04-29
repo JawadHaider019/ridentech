@@ -6,7 +6,7 @@ module.exports = {
     theme: {
         extend: {
             colors: {
-                accent: 'rgb(223, 145, 20)',
+                accent: '#DF9114',
             },
             fontFamily: {
                 sans: ['Poppins', 'sans-serif'],

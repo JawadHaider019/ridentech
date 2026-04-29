@@ -10,6 +10,8 @@ import {
 } from 'react-icons/fi';
 import { LuSparkles } from 'react-icons/lu';
 import gsap from 'gsap';
+import { getPosts, createPost, updatePost, deletePost } from '../api/blogApi';
+import MarkdownRenderer from './MarkdownRenderer';
 
 // Custom Alert Component - Black/White theme with GSAP
 const Alert = ({ type, message, onClose }) => {
@@ -72,199 +74,7 @@ const Alert = ({ type, message, onClose }) => {
   );
 };
 
-// Markdown Renderer with proper formatting - Black/White theme
-const MarkdownRenderer = ({ content }) => {
-  if (!content) return null;
-
-  const renderFormattedContent = (text) => {
-    if (!text) return null;
-
-    if (text.toLowerCase().includes('<!doctype html>') || text.includes('<!-- RAW_HTML -->')) {
-      return (
-        <iframe
-          srcDoc={text}
-          className="w-full border-0 bg-white"
-          style={{ overflow: 'hidden', minHeight: '400px' }}
-          scrolling="no"
-          title="Custom HTML Content"
-          onLoad={(e) => {
-            const iframe = e.target;
-            const adjustHeight = () => {
-              try {
-                const height = iframe.contentWindow.document.documentElement.scrollHeight;
-                iframe.style.height = height + 'px';
-              } catch (err) { }
-            };
-            adjustHeight();
-            setTimeout(adjustHeight, 500);
-            setTimeout(adjustHeight, 2000);
-          }}
-        />
-      );
-    }
-
-    const lines = text.split('\n');
-    const result = [];
-    let i = 0;
-
-    const processInlineFormatting = (content) => {
-      let processedContent = content;
-      // Bold/Italic/Links
-      processedContent = processedContent.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
-      processedContent = processedContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      processedContent = processedContent.replace(/\*(.*?)\*/g, '<em>$1</em>');
-      processedContent = processedContent.replace(
-        /\[([^\]]+)\]\(([^)]+)\)/g,
-        '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-gray-900 hover:text-gray-600 underline transition-colors">$1</a>'
-      );
-      return processedContent;
-    };
-
-    while (i < lines.length) {
-      const line = lines[i];
-
-      // Handle Tables
-      if (line.trim().startsWith('|') && i + 1 < lines.length && lines[i + 1].replace(/\s/g, '').includes('|-')) {
-        const tableLines = [];
-        let j = i;
-        while (j < lines.length && lines[j].trim().startsWith('|')) {
-          tableLines.push(lines[j]);
-          j++;
-        }
-
-        if (tableLines.length >= 2) {
-          const headers = tableLines[0].split('|').filter(cell => cell.trim() !== '').map(cell => cell.trim());
-          const rows = tableLines.slice(2).map(row =>
-            row.split('|').filter(cell => cell.trim() !== '').map(cell => cell.trim())
-          );
-
-          result.push(
-            <div key={`table-${i}`} className="overflow-x-auto my-6 rounded-xl border border-gray-200 shadow-sm">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    {headers.map((header, idx) => (
-                      <th key={idx} className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
-                        <span dangerouslySetInnerHTML={{ __html: processInlineFormatting(header) }} />
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {rows.map((row, rowIdx) => (
-                    <tr key={rowIdx} className={rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
-                      {row.map((cell, cellIdx) => (
-                        <td key={cellIdx} className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                          <span dangerouslySetInnerHTML={{ __html: processInlineFormatting(cell) }} />
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          );
-          i = j;
-          continue;
-        }
-      }
-
-      // Code Blocks
-      else if (line.trim().startsWith('```')) {
-        const language = line.trim().slice(3) || 'javascript';
-        const codeLines = [];
-        let j = i + 1;
-        while (j < lines.length && !lines[j].trim().startsWith('```')) {
-          codeLines.push(lines[j]);
-          j++;
-        }
-        result.push(
-          <div key={`code-${i}`} className="my-6 rounded-xl overflow-hidden border border-gray-200 bg-gray-900 shadow-sm group relative font-mono text-sm">
-            <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
-              <span className="text-gray-300 capitalize">{language}</span>
-              <button
-                onClick={() => navigator.clipboard.writeText(codeLines.join('\n'))}
-                className="text-gray-400 hover:text-white transition-colors"
-                title="Copy code"
-              >
-                <FiCopy size={14} />
-              </button>
-            </div>
-            <pre className="p-4 overflow-x-auto">
-              <code className="text-gray-100 leading-relaxed">
-                {codeLines.join('\n')}
-              </code>
-            </pre>
-          </div>
-        );
-        i = j + 1;
-        continue;
-      }
-
-      // Headers
-      else if (line.startsWith('# ')) {
-        result.push(<h1 key={i} className="text-2xl font-semibold text-gray-900 mt-6 mb-4"><span dangerouslySetInnerHTML={{ __html: processInlineFormatting(line.substring(2)) }} /></h1>);
-      } else if (line.startsWith('## ')) {
-        result.push(<h2 key={i} className="text-xl font-semibold text-gray-800 mt-5 mb-3"><span dangerouslySetInnerHTML={{ __html: processInlineFormatting(line.substring(3)) }} /></h2>);
-      } else if (line.startsWith('### ')) {
-        result.push(<h3 key={i} className="text-lg font-semibold text-gray-800 mt-4 mb-2"><span dangerouslySetInnerHTML={{ __html: processInlineFormatting(line.substring(4)) }} /></h3>);
-      }
-
-      // Images
-      else if (line.startsWith('![') && line.includes('](')) {
-        const altMatch = line.match(/!\[(.*?)\]/);
-        const urlMatch = line.match(/\((.*?)\)/);
-        if (urlMatch) {
-          result.push(
-            <div key={i} className="my-4">
-              <img
-                src={urlMatch[1]}
-                alt={altMatch ? altMatch[1] : ''}
-                className="max-w-full rounded-lg shadow-md hover:shadow-lg transition-shadow border border-gray-200"
-                loading="lazy"
-              />
-              {altMatch && altMatch[1] && (
-                <p className="text-xs text-gray-500 mt-1 text-center">{altMatch[1]}</p>
-              )}
-            </div>
-          );
-        }
-      }
-
-      else if (line.trim()) {
-        if (line.startsWith('- ')) {
-          result.push(
-            <li key={i} className="ml-6 list-disc text-gray-700 mb-1">
-              <span dangerouslySetInnerHTML={{ __html: processInlineFormatting(line.substring(2)) }} />
-            </li>
-          );
-        } else if (/^\d+\.\s/.test(line)) {
-          result.push(
-            <li key={i} className="ml-6 list-decimal text-gray-700 mb-1">
-              <span dangerouslySetInnerHTML={{ __html: processInlineFormatting(line.replace(/^\d+\.\s/, '')) }} />
-            </li>
-          );
-        } else {
-          result.push(
-            <p key={i} className="mb-4 text-gray-700">
-              <span dangerouslySetInnerHTML={{ __html: processInlineFormatting(line) }} />
-            </p>
-          );
-        }
-      } else {
-        result.push(<br key={i} />);
-      }
-      i++;
-    }
-    return result;
-  };
-
-  return (
-    <div className="prose max-w-none">
-      {renderFormattedContent(content)}
-    </div>
-  );
-};
+// Markdown Renderer is now imported from ./MarkdownRenderer.jsx
 
 // SEO Helper - Black/White theme
 const SEOHelper = ({ blog }) => {
@@ -468,7 +278,6 @@ const FormattingToolbar = ({ onFormat, onLinkClick, onImageClick, onImageUpload,
     { icon: FiItalic, action: 'italic', title: 'Italic' },
     { icon: FiHash, action: 'heading', title: 'Heading' },
     { icon: FiList, action: 'ul', title: 'Bullet List' },
-    { icon: FiCode, action: 'codeblock', title: 'Code Block' },
   ];
 
   const handleFormat = (action) => {
@@ -529,11 +338,6 @@ const FormattingToolbar = ({ onFormat, onLinkClick, onImageClick, onImageUpload,
         const htmlTemplate = `<!-- RAW_HTML -->\n<!DOCTYPE html>\n<html lang="en">\n<head>\n  <style>\n  /* Your CSS here */\n  </style>\n</head>\n<body>\n\n</body>\n</html>\n`;
         newContent = content.substring(0, start) + htmlTemplate + content.substring(end);
         newCursorPos = start + htmlTemplate.length;
-        break;
-      case 'codeblock':
-        const codeTemplate = `\n\`\`\`javascript\n// Your code here\nconsole.log("Hello World");\n\`\`\`\n`;
-        newContent = content.substring(0, start) + codeTemplate + content.substring(end);
-        newCursorPos = start + codeTemplate.length;
         break;
       default:
         return;
@@ -784,7 +588,8 @@ const ViewBlogModal = ({ blog, onClose }) => {
               alt={blog.title || 'Blog post'}
               className="w-full h-48 object-cover rounded-lg mb-6 border border-gray-200"
               onError={(e) => {
-                e.target.src = 'https://via.placeholder.com/400x200?text=Image+Not+Found';
+                e.target.onerror = null;
+                e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200' viewBox='0 0 400 200'%3E%3Crect fill='%23f3f4f6' width='400' height='200'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-family='sans-serif' font-size='14'%3EImage Not Found%3C/text%3E%3C/svg%3E";
               }}
             />
           )}
@@ -860,7 +665,8 @@ const BlogCard = ({ blog, onEdit, onDelete, onView, index }) => {
             alt={blog.title || 'Blog post'}
             className="w-full h-full object-cover"
             onError={(e) => {
-              e.target.src = 'https://via.placeholder.com/150?text=No+Image';
+              e.target.onerror = null;
+              e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect fill='%23f3f4f6' width='150' height='150'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-family='sans-serif' font-size='12'%3ENo Image%3C/text%3E%3C/svg%3E";
             }}
           />
         ) : (
@@ -1026,20 +832,48 @@ const BlogManager = () => {
     images: [] // To track multiple images
   });
 
+  const [featuredImageFile, setFeaturedImageFile] = useState(null);
+
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const headerRef = useRef(null);
   const tabsRef = useRef(null);
   const editorRef = useRef(null);
 
+  // Map backend field names to frontend field names
+  const normalizePost = (post) => ({
+    ...post,
+    imageUrl: post.featured_image_url || post.featured_image || post.imageUrl || '',
+    category: post.category?.name || post.category || '',
+    status: (post.status || '').toLowerCase(),   // "Published" -> "published"
+    readTime: post.read_time || post.readTime || 0,
+    metaDescription: post.meta_description || post.metaDescription || '',
+    tags: Array.isArray(post.tags) ? post.tags : [],
+  });
+
   // Fetch blogs from DB
   const fetchBlogs = async () => {
     setIsLoading(true);
     try {
-      setBlogs(dummyBlogs);
+      const resp = await getPosts();
+      let extracted = [];
+
+      if (Array.isArray(resp)) {
+        extracted = resp;
+      } else if (resp?.posts && Array.isArray(resp.posts)) {
+        extracted = resp.posts;
+      } else if (resp?.data) {
+        if (Array.isArray(resp.data)) {
+          extracted = resp.data;
+        } else if (resp.data.data && Array.isArray(resp.data.data)) {
+          extracted = resp.data.data;
+        }
+      }
+
+      setBlogs(extracted.map(normalizePost));
     } catch (error) {
       console.error('Fetch error:', error);
-      addAlert('error', 'Connection error');
+      addAlert('error', 'Connection error fetching posts');
     } finally {
       setIsLoading(false);
     }
@@ -1171,6 +1005,8 @@ const BlogManager = () => {
     try {
       // Create object URL for immediate display
       const fullUrl = URL.createObjectURL(file);
+      setFeaturedImageFile(file);
+
       if (editingBlog) {
         setEditingBlog({
           ...editingBlog,
@@ -1315,28 +1151,45 @@ const BlogManager = () => {
     setIsLoading(true);
     const token = localStorage.getItem('admin-token');
 
-    const blogData = {
-      title: (editingBlog?.title || newBlog.title),
-      content: (editingBlog?.content || newBlog.content),
-      excerpt: (editingBlog?.excerpt || newBlog.excerpt || (editingBlog?.content || newBlog.content).substring(0, 150) + '...'),
-      category: (editingBlog?.category || newBlog.category),
-      tags: (editingBlog?.tags || newBlog.tags),
-      imageUrl: (editingBlog?.imageUrl || newBlog.imageUrl),
-      featured: (editingBlog?.featured || newBlog.featured),
-      status,
-      readTime: Math.max(1, Math.ceil((editingBlog?.content || newBlog.content).split(/\s+/).length / 200)),
-      metaDescription: (editingBlog?.metaDescription || newBlog.metaDescription)
-    };
+    // Map frontend 'published'/'draft' to default backend 'active'/'inactive' just in case.
+    // Also snake_case the keys!
+    const backendStatus = status === 'published' ? 'Published' : 'Draft';
+
+    const formData = new FormData();
+    formData.append('title', (editingBlog?.title || newBlog.title));
+    formData.append('content', (editingBlog?.content || newBlog.content));
+    formData.append('excerpt', (editingBlog?.excerpt || newBlog.excerpt || (editingBlog?.content || newBlog.content).substring(0, 150) + '...'));
+    formData.append('category_id', (editingBlog?.category_id || newBlog.category_id || 1));
+    formData.append('featured', (editingBlog?.featured || newBlog.featured) ? 1 : 0);
+    formData.append('status', backendStatus);
+    formData.append('read_time', Math.max(1, Math.ceil((editingBlog?.content || newBlog.content).split(/\s+/).length / 200)));
+    formData.append('meta_description', (editingBlog?.metaDescription || newBlog.metaDescription || ''));
+
+    // Append tags
+    const tags = (editingBlog?.tags || newBlog.tags || []);
+    tags.forEach(tag => formData.append('tags[]', tag));
+
+    // Only append image if it's a new file
+    if (featuredImageFile) {
+      formData.append('featured_image', featuredImageFile);
+    }
 
     try {
-      const data = { ...blogData, id: Date.now(), slug: blogData.title.toLowerCase().replace(/\s+/g, '-') };
-      setBlogs(prev => [data, ...prev]);
+      await createPost(formData);
+      await fetchBlogs();
       resetForm();
       addAlert('success', status === 'published' ? 'Blog published!' : 'Saved as draft');
       setShowPreview(false);
     } catch (error) {
       console.error('Save error:', error);
-      addAlert('error', 'Connection error');
+      console.error('Full 422 response:', JSON.stringify(error.response?.data, null, 2));
+      const msg = error.response?.data?.message || 'Connection error saving post';
+      const errors = error.response?.data?.errors;
+      if (errors && Object.values(errors).length > 0) {
+        addAlert('error', Object.values(errors).flat().join(', '));
+      } else {
+        addAlert('error', msg);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -1346,15 +1199,43 @@ const BlogManager = () => {
     if (!editingBlog) return;
 
     setIsLoading(true);
-    const token = localStorage.getItem('admin-token');
+
+    const backendStatus = editingBlog.status === 'published' ? 'Published' : (editingBlog.status === 'draft' ? 'Draft' : editingBlog.status);
+
+    const formData = new FormData();
+    formData.append('title', editingBlog.title);
+    formData.append('content', editingBlog.content);
+    formData.append('excerpt', editingBlog.excerpt);
+    formData.append('category_id', editingBlog.category_id || 1);
+    formData.append('featured', editingBlog.featured ? 1 : 0);
+    formData.append('status', backendStatus);
+    formData.append('read_time', editingBlog.readTime || 1);
+    formData.append('meta_description', editingBlog.metaDescription || '');
+
+    // Append tags
+    const tags = editingBlog.tags || [];
+    tags.forEach(tag => formData.append('tags[]', tag));
+
+    // Only append image if it's a new file
+    if (featuredImageFile) {
+      formData.append('featured_image', featuredImageFile);
+    }
 
     try {
-      setBlogs(prev => prev.map(b => b.id === editingBlog.id ? editingBlog : b));
+      await updatePost(editingBlog.id, formData);
+      await fetchBlogs();
       cancelEdit();
       addAlert('success', 'Blog updated successfully!');
     } catch (error) {
       console.error('Update error:', error);
-      addAlert('error', 'Connection error');
+      console.error('Full 422 response:', JSON.stringify(error.response?.data, null, 2));
+      const msg = error.response?.data?.message || 'Connection error updating post';
+      const errors = error.response?.data?.errors;
+      if (errors && Object.values(errors).length > 0) {
+        addAlert('error', Object.values(errors).flat().join(', '));
+      } else {
+        addAlert('error', msg);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -1364,16 +1245,16 @@ const BlogManager = () => {
     if (!deleteConfirm.blog) return;
 
     setIsLoading(true);
-    const token = localStorage.getItem('admin-token');
 
     try {
-      setBlogs(prev => prev.filter(b => b.id !== deleteConfirm.blog.id));
+      await deletePost(deleteConfirm.blog.id);
+      await fetchBlogs();
       addAlert('success', `"${deleteConfirm.blog.title}" deleted successfully`);
       if (viewingBlog?.id === deleteConfirm.blog.id) setViewingBlog(null);
       if (editingBlog?.id === deleteConfirm.blog.id) cancelEdit();
     } catch (error) {
       console.error('Delete error:', error);
-      addAlert('error', 'Connection error');
+      addAlert('error', 'Connection error deleting post');
     } finally {
       setIsLoading(false);
       setDeleteConfirm({ isOpen: false, blog: null });
@@ -1384,6 +1265,7 @@ const BlogManager = () => {
     if (!blog) return;
 
     setEditingBlog(blog);
+    setFeaturedImageFile(null);
     setActiveTab('create');
     setShowPreview(false);
     setNewBlog({
@@ -1411,9 +1293,10 @@ const BlogManager = () => {
       tags: [], imageUrl: '', featured: false, status: 'draft',
       metaDescription: '', images: []
     });
+    setFeaturedImageFile(null);
   };
 
-  const filteredBlogs = blogs.filter(blog => {
+  const filteredBlogs = Array.isArray(blogs) ? blogs.filter(blog => {
     if (!blog) return false;
 
     const title = blog.title || '';
@@ -1423,7 +1306,7 @@ const BlogManager = () => {
     const matchesStatus = filterStatus === 'all' || blog.status === filterStatus;
 
     return matchesSearch && matchesStatus;
-  });
+  }) : [];
 
   return (
     <div className="min-h-screen bg-white">
