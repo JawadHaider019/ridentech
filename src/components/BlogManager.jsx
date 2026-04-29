@@ -5,7 +5,8 @@ import {
   FiSend, FiBold, FiItalic, FiList, FiHash, FiCalendar,
   FiUser, FiTag, FiUpload, FiEyeOff, FiClock,
   FiCheckCircle, FiAlertCircle, FiStar, FiSave,
-  FiSearch, FiGlobe, FiHelpCircle, FiPaperclip, FiRefreshCw
+  FiSearch, FiGlobe, FiHelpCircle, FiPaperclip, FiRefreshCw,
+  FiTable, FiSquare, FiCode, FiGrid, FiCopy, FiUploadCloud
 } from 'react-icons/fi';
 import { LuSparkles } from 'react-icons/lu';
 import gsap from 'gsap';
@@ -78,25 +79,144 @@ const MarkdownRenderer = ({ content }) => {
   const renderFormattedContent = (text) => {
     if (!text) return null;
 
+    if (text.toLowerCase().includes('<!doctype html>') || text.includes('<!-- RAW_HTML -->')) {
+      return (
+        <iframe
+          srcDoc={text}
+          className="w-full border-0 bg-white"
+          style={{ overflow: 'hidden', minHeight: '400px' }}
+          scrolling="no"
+          title="Custom HTML Content"
+          onLoad={(e) => {
+            const iframe = e.target;
+            const adjustHeight = () => {
+              try {
+                const height = iframe.contentWindow.document.documentElement.scrollHeight;
+                iframe.style.height = height + 'px';
+              } catch (err) { }
+            };
+            adjustHeight();
+            setTimeout(adjustHeight, 500);
+            setTimeout(adjustHeight, 2000);
+          }}
+        />
+      );
+    }
+
     const lines = text.split('\n');
+    const result = [];
+    let i = 0;
 
-    return lines.map((line, lineIndex) => {
-      if (line.startsWith('# ')) {
-        return <h1 key={lineIndex} className="text-2xl font-semibold text-gray-900 mt-6 mb-4">{line.substring(2)}</h1>;
-      }
-      if (line.startsWith('## ')) {
-        return <h2 key={lineIndex} className="text-xl font-semibold text-gray-800 mt-5 mb-3">{line.substring(3)}</h2>;
-      }
-      if (line.startsWith('### ')) {
-        return <h3 key={lineIndex} className="text-lg font-semibold text-gray-800 mt-4 mb-2">{line.substring(4)}</h3>;
+    const processInlineFormatting = (content) => {
+      let processedContent = content;
+      // Bold/Italic/Links
+      processedContent = processedContent.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+      processedContent = processedContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      processedContent = processedContent.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      processedContent = processedContent.replace(
+        /\[([^\]]+)\]\(([^)]+)\)/g,
+        '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-gray-900 hover:text-gray-600 underline transition-colors">$1</a>'
+      );
+      return processedContent;
+    };
+
+    while (i < lines.length) {
+      const line = lines[i];
+
+      // Handle Tables
+      if (line.trim().startsWith('|') && i + 1 < lines.length && lines[i + 1].replace(/\s/g, '').includes('|-')) {
+        const tableLines = [];
+        let j = i;
+        while (j < lines.length && lines[j].trim().startsWith('|')) {
+          tableLines.push(lines[j]);
+          j++;
+        }
+
+        if (tableLines.length >= 2) {
+          const headers = tableLines[0].split('|').filter(cell => cell.trim() !== '').map(cell => cell.trim());
+          const rows = tableLines.slice(2).map(row =>
+            row.split('|').filter(cell => cell.trim() !== '').map(cell => cell.trim())
+          );
+
+          result.push(
+            <div key={`table-${i}`} className="overflow-x-auto my-6 rounded-xl border border-gray-200 shadow-sm">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {headers.map((header, idx) => (
+                      <th key={idx} className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
+                        <span dangerouslySetInnerHTML={{ __html: processInlineFormatting(header) }} />
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {rows.map((row, rowIdx) => (
+                    <tr key={rowIdx} className={rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                      {row.map((cell, cellIdx) => (
+                        <td key={cellIdx} className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                          <span dangerouslySetInnerHTML={{ __html: processInlineFormatting(cell) }} />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+          i = j;
+          continue;
+        }
       }
 
-      if (line.startsWith('![') && line.includes('](')) {
+      // Code Blocks
+      else if (line.trim().startsWith('```')) {
+        const language = line.trim().slice(3) || 'javascript';
+        const codeLines = [];
+        let j = i + 1;
+        while (j < lines.length && !lines[j].trim().startsWith('```')) {
+          codeLines.push(lines[j]);
+          j++;
+        }
+        result.push(
+          <div key={`code-${i}`} className="my-6 rounded-xl overflow-hidden border border-gray-200 bg-gray-900 shadow-sm group relative font-mono text-sm">
+            <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
+              <span className="text-gray-300 capitalize">{language}</span>
+              <button
+                onClick={() => navigator.clipboard.writeText(codeLines.join('\n'))}
+                className="text-gray-400 hover:text-white transition-colors"
+                title="Copy code"
+              >
+                <FiCopy size={14} />
+              </button>
+            </div>
+            <pre className="p-4 overflow-x-auto">
+              <code className="text-gray-100 leading-relaxed">
+                {codeLines.join('\n')}
+              </code>
+            </pre>
+          </div>
+        );
+        i = j + 1;
+        continue;
+      }
+
+      // Headers
+      else if (line.startsWith('# ')) {
+        result.push(<h1 key={i} className="text-2xl font-semibold text-gray-900 mt-6 mb-4"><span dangerouslySetInnerHTML={{ __html: processInlineFormatting(line.substring(2)) }} /></h1>);
+      } else if (line.startsWith('## ')) {
+        result.push(<h2 key={i} className="text-xl font-semibold text-gray-800 mt-5 mb-3"><span dangerouslySetInnerHTML={{ __html: processInlineFormatting(line.substring(3)) }} /></h2>);
+      } else if (line.startsWith('### ')) {
+        result.push(<h3 key={i} className="text-lg font-semibold text-gray-800 mt-4 mb-2"><span dangerouslySetInnerHTML={{ __html: processInlineFormatting(line.substring(4)) }} /></h3>);
+      }
+
+      // Images
+      else if (line.startsWith('![') && line.includes('](')) {
         const altMatch = line.match(/!\[(.*?)\]/);
         const urlMatch = line.match(/\((.*?)\)/);
         if (urlMatch) {
-          return (
-            <div key={lineIndex} className="my-4">
+          result.push(
+            <div key={i} className="my-4">
               <img
                 src={urlMatch[1]}
                 alt={altMatch ? altMatch[1] : ''}
@@ -111,54 +231,32 @@ const MarkdownRenderer = ({ content }) => {
         }
       }
 
-      if (line.trim()) {
-        let processedContent = line;
-
-        processedContent = processedContent.replace(
-          /\*\*\*(.*?)\*\*\*/g,
-          '<strong><em>$1</em></strong>'
-        );
-
-        processedContent = processedContent.replace(
-          /\*\*(.*?)\*\*/g,
-          '<strong>$1</strong>'
-        );
-
-        processedContent = processedContent.replace(
-          /\*(.*?)\*/g,
-          '<em>$1</em>'
-        );
-
-        processedContent = processedContent.replace(
-          /\[([^\]]+)\]\(([^)]+)\)/g,
-          '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-gray-900 hover:text-gray-600 underline transition-colors">$1</a>'
-        );
-
+      else if (line.trim()) {
         if (line.startsWith('- ')) {
-          return (
-            <li key={lineIndex} className="ml-6 list-disc text-gray-700 mb-1">
-              <span dangerouslySetInnerHTML={{ __html: processedContent.substring(2) }} />
+          result.push(
+            <li key={i} className="ml-6 list-disc text-gray-700 mb-1">
+              <span dangerouslySetInnerHTML={{ __html: processInlineFormatting(line.substring(2)) }} />
             </li>
           );
-        }
-
-        if (/^\d+\.\s/.test(line)) {
-          return (
-            <li key={lineIndex} className="ml-6 list-decimal text-gray-700 mb-1">
-              <span dangerouslySetInnerHTML={{ __html: processedContent.replace(/^\d+\.\s/, '') }} />
+        } else if (/^\d+\.\s/.test(line)) {
+          result.push(
+            <li key={i} className="ml-6 list-decimal text-gray-700 mb-1">
+              <span dangerouslySetInnerHTML={{ __html: processInlineFormatting(line.replace(/^\d+\.\s/, '')) }} />
             </li>
           );
+        } else {
+          result.push(
+            <p key={i} className="mb-4 text-gray-700">
+              <span dangerouslySetInnerHTML={{ __html: processInlineFormatting(line) }} />
+            </p>
+          );
         }
-
-        return (
-          <p key={lineIndex} className="mb-4 text-gray-700">
-            <span dangerouslySetInnerHTML={{ __html: processedContent }} />
-          </p>
-        );
+      } else {
+        result.push(<br key={i} />);
       }
-
-      return <br key={lineIndex} />;
-    });
+      i++;
+    }
+    return result;
   };
 
   return (
@@ -200,6 +298,50 @@ const SEOHelper = ({ blog }) => {
             }`}>
             <span>•</span>
             {tip.msg}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Image Library Component - Black/White theme
+const ImageLibrary = ({ images, onInsert, onSetFeatured, onRemove }) => {
+  if (!images || images.length === 0) return null;
+
+  return (
+    <div className="mt-6 bg-gray-50 rounded-xl border border-gray-200 p-4">
+      <div className="flex items-center gap-2 mb-4 text-sm font-medium text-gray-900">
+        <FiGrid className="text-gray-700" />
+        Post Media Library ({images.length})
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        {images.map((url, idx) => (
+          <div key={`${url}-${idx}`} className="group relative aspect-square rounded-lg border border-gray-200 overflow-hidden bg-white shadow-sm hover:shadow-md transition-all">
+            <img src={url} alt={`Media ${idx}`} className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
+              <button
+                type="button"
+                onClick={() => onInsert(url)}
+                className="w-full py-1 bg-white text-gray-900 text-[10px] font-medium rounded hover:bg-gray-100 flex items-center justify-center gap-1"
+              >
+                <FiPlus size={10} /> Insert
+              </button>
+              <button
+                type="button"
+                onClick={() => onSetFeatured(url)}
+                className="w-full py-1 bg-gray-800 text-white text-[10px] font-medium rounded hover:bg-gray-700 flex items-center justify-center gap-1"
+              >
+                <FiStar size={10} /> Feature
+              </button>
+              <button
+                type="button"
+                onClick={() => onRemove(url)}
+                className="absolute top-1 right-1 text-white hover:text-gray-300"
+              >
+                <FiX size={14} />
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -320,12 +462,13 @@ const LinkModal = ({ isOpen, onClose, onInsert }) => {
 };
 
 // Formatting Toolbar - Black/White theme
-const FormattingToolbar = ({ onFormat, onLinkClick, onImageClick, onImageUpload, textareaRef }) => {
+const FormattingToolbar = ({ onFormat, onLinkClick, onImageClick, onImageUpload, onInlineImageUpload, textareaRef }) => {
   const formats = [
     { icon: FiBold, action: 'bold', title: 'Bold' },
     { icon: FiItalic, action: 'italic', title: 'Italic' },
     { icon: FiHash, action: 'heading', title: 'Heading' },
     { icon: FiList, action: 'ul', title: 'Bullet List' },
+    { icon: FiCode, action: 'codeblock', title: 'Code Block' },
   ];
 
   const handleFormat = (action) => {
@@ -377,6 +520,21 @@ const FormattingToolbar = ({ onFormat, onLinkClick, onImageClick, onImageUpload,
         }
         break;
       }
+      case 'table':
+        const tableTemplate = `\n| Header 1 | Header 2 |\n| --- | --- |\n| Cell 1 | Cell 2 |\n`;
+        newContent = content.substring(0, start) + tableTemplate + content.substring(end);
+        newCursorPos = start + tableTemplate.length;
+        break;
+      case 'html':
+        const htmlTemplate = `<!-- RAW_HTML -->\n<!DOCTYPE html>\n<html lang="en">\n<head>\n  <style>\n  /* Your CSS here */\n  </style>\n</head>\n<body>\n\n</body>\n</html>\n`;
+        newContent = content.substring(0, start) + htmlTemplate + content.substring(end);
+        newCursorPos = start + htmlTemplate.length;
+        break;
+      case 'codeblock':
+        const codeTemplate = `\n\`\`\`javascript\n// Your code here\nconsole.log("Hello World");\n\`\`\`\n`;
+        newContent = content.substring(0, start) + codeTemplate + content.substring(end);
+        newCursorPos = start + codeTemplate.length;
+        break;
       default:
         return;
     }
@@ -404,6 +562,23 @@ const FormattingToolbar = ({ onFormat, onLinkClick, onImageClick, onImageUpload,
       ))}
       <div className="w-px h-5 bg-gray-300 mx-1" />
       <button
+        onClick={() => handleFormat('table')}
+        className="p-2 hover:bg-white rounded-md text-gray-600 hover:text-gray-900"
+        title="Insert Table"
+        type="button"
+      >
+        <FiTable size={16} />
+      </button>
+      <button
+        onClick={() => handleFormat('html')}
+        className="p-2 hover:bg-white rounded-md text-gray-600 hover:text-gray-900"
+        title="Insert Raw HTML Boilerplate"
+        type="button"
+      >
+        <FiSquare size={16} />
+      </button>
+      <div className="w-px h-5 bg-gray-300 mx-1" />
+      <button
         onClick={onLinkClick}
         className="p-2 hover:bg-white rounded-md text-gray-600 hover:text-gray-900"
         title="Insert Link"
@@ -419,6 +594,28 @@ const FormattingToolbar = ({ onFormat, onLinkClick, onImageClick, onImageUpload,
       >
         <FiImage size={16} />
       </button>
+
+      <div className="relative">
+        <input
+          type="file"
+          accept="image/*"
+          onChange={onInlineImageUpload}
+          className="absolute inset-0 opacity-0 w-full cursor-pointer"
+          title="Upload image to post"
+        />
+        <button
+          className="p-2 hover:bg-white rounded-md text-gray-600 hover:text-gray-900 flex items-center gap-1"
+          title="Upload image to post"
+          type="button"
+          onClick={(e) => {
+            e.currentTarget.previousSibling?.click();
+          }}
+        >
+          <FiUploadCloud size={16} />
+        </button>
+      </div>
+
+      <div className="w-px h-5 bg-gray-300 mx-1" />
 
       <div className="relative">
         <input
@@ -825,7 +1022,8 @@ const BlogManager = () => {
     imageUrl: '',
     featured: false,
     status: 'draft',
-    metaDescription: ''
+    metaDescription: '',
+    images: [] // To track multiple images
   });
 
   const textareaRef = useRef(null);
@@ -971,17 +1169,84 @@ const BlogManager = () => {
     formData.append('image', file);
 
     try {
-      // Simulate upload and use a placeholder or local URL
-      const fullUrl = 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800';
+      // Create object URL for immediate display
+      const fullUrl = URL.createObjectURL(file);
       if (editingBlog) {
-        setEditingBlog({ ...editingBlog, imageUrl: fullUrl });
+        setEditingBlog({
+          ...editingBlog,
+          imageUrl: fullUrl,
+          images: [...(editingBlog.images || []), fullUrl]
+        });
       } else {
-        setNewBlog({ ...newBlog, imageUrl: fullUrl });
+        setNewBlog({
+          ...newBlog,
+          imageUrl: fullUrl,
+          images: [...(newBlog.images || []), fullUrl]
+        });
       }
       addAlert('success', 'Featured image uploaded successfully!');
     } catch (error) {
       console.error('Upload error:', error);
       addAlert('error', 'Connection error during upload');
+    } finally {
+      setUploadingImage(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleInlineImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      addAlert('error', 'Please select an image file');
+      return;
+    }
+
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      addAlert('error', 'File size too large (max 5MB)');
+      return;
+    }
+
+    setUploadingImage(true);
+
+    try {
+      const fullUrl = URL.createObjectURL(file);
+      addAlert('success', 'Image inserted into post!');
+
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const selectedText = textarea.value.substring(start, end);
+      const content = textarea.value;
+
+      const imageMarkdown = `\n![${selectedText || 'Inline Image'}](${fullUrl})\n`;
+      const newContent = content.substring(0, start) + imageMarkdown + content.substring(end);
+
+      handleFormat(newContent);
+
+      if (editingBlog) {
+        setEditingBlog({
+          ...editingBlog,
+          images: [...(editingBlog.images || []), fullUrl]
+        });
+      } else {
+        setNewBlog({
+          ...newBlog,
+          images: [...(newBlog.images || []), fullUrl]
+        });
+      }
+
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + imageMarkdown.length, start + imageMarkdown.length);
+      }, 0);
+    } catch (error) {
+      addAlert('error', 'Error reading image: ' + error.message);
     } finally {
       setUploadingImage(false);
       e.target.value = '';
@@ -998,6 +1263,47 @@ const BlogManager = () => {
     }
 
     setNewTag('');
+  };
+
+  const insertMedia = (url) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const content = textarea.value;
+
+    const imageMarkdown = `\n![Image](${url})\n`;
+    const newContent = content.substring(0, start) + imageMarkdown + content.substring(end);
+
+    handleFormat(newContent);
+    addAlert('success', 'Image inserted into post');
+  };
+
+  const setFeaturedMedia = (url) => {
+    if (editingBlog) {
+      setEditingBlog({ ...editingBlog, imageUrl: url });
+    } else {
+      setNewBlog({ ...newBlog, imageUrl: url });
+    }
+    addAlert('success', 'Featured image updated');
+  };
+
+  const removeMedia = (url) => {
+    if (editingBlog) {
+      setEditingBlog({
+        ...editingBlog,
+        images: editingBlog.images.filter(img => img !== url),
+        imageUrl: editingBlog.imageUrl === url ? '' : editingBlog.imageUrl
+      });
+    } else {
+      setNewBlog({
+        ...newBlog,
+        images: newBlog.images.filter(img => img !== url),
+        imageUrl: newBlog.imageUrl === url ? '' : newBlog.imageUrl
+      });
+    }
+    addAlert('info', 'Image removed from library');
   };
 
   const saveBlog = async (status = 'draft') => {
@@ -1089,7 +1395,8 @@ const BlogManager = () => {
       imageUrl: blog.imageUrl || '',
       featured: blog.featured || false,
       status: blog.status || 'draft',
-      metaDescription: blog.metaDescription || ''
+      metaDescription: blog.metaDescription || '',
+      images: blog.images || []
     });
   };
 
@@ -1102,7 +1409,7 @@ const BlogManager = () => {
     setNewBlog({
       title: '', content: '', excerpt: '', category: '',
       tags: [], imageUrl: '', featured: false, status: 'draft',
-      metaDescription: ''
+      metaDescription: '', images: []
     });
   };
 
@@ -1228,6 +1535,7 @@ const BlogManager = () => {
                   onLinkClick={() => setShowLinkModal(true)}
                   onImageClick={handleImageUrlInsert}
                   onImageUpload={handleImageUpload}
+                  onInlineImageUpload={handleInlineImageUpload}
                   textareaRef={textareaRef}
                 />
 
@@ -1377,6 +1685,13 @@ const BlogManager = () => {
                 <div className="mt-4">
                   <SEOHelper blog={editingBlog || newBlog} />
                 </div>
+
+                <ImageLibrary
+                  images={editingBlog?.images || newBlog.images}
+                  onInsert={insertMedia}
+                  onSetFeatured={setFeaturedMedia}
+                  onRemove={removeMedia}
+                />
 
                 {/* Actions */}
                 <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100">
