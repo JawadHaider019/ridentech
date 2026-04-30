@@ -123,7 +123,7 @@ const AdminLogin = () => {
 
     if (isAuthenticated) {
         return (
-            <div className="min-h-screen bg-white">
+            <div className="min-h-screen bg-white text-gray-900">
                 <div className="bg-gradient-to-r from-gray-900 to-black text-white border-b border-gray-800">
                     <div className="max-w-7xl mx-auto px-4 py-4">
                         <div className="flex justify-between items-center">
@@ -151,7 +151,7 @@ const AdminLogin = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center p-4 text-gray-900">
             <div
                 className="absolute inset-0 opacity-10"
                 style={{

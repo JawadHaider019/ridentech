@@ -157,7 +157,7 @@ const MarkdownRenderer = ({ content }) => {
     };
 
     return (
-        <div className="markdown-content">
+        <div className="markdown-content text-gray-900">
             {renderFormattedContent(content)}
         </div>
     );

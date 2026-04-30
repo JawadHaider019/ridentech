@@ -323,7 +323,7 @@ export default function Blog() {
   return (
     <section
       ref={sectionRef}
-      className="w-full bg-white relative pt-16 pb-8 z-10"
+      className="w-full bg-white text-gray-900 relative pt-16 pb-8 z-10"
     >
       <div
         ref={pinContainerRef}

@@ -165,7 +165,7 @@ export default function BlogPostPage() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-white">
+            <div className="min-h-screen flex items-center justify-center bg-white text-gray-900">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
             </div>
         );
@@ -186,7 +186,7 @@ export default function BlogPostPage() {
     const postDate = formatDate(post.createdAt);
 
     return (
-        <section ref={sectionRef} className="py-16 bg-white relative overflow-hidden">
+        <section ref={sectionRef} className="py-16 bg-white text-gray-900 relative overflow-hidden">
             <Helmet>
                 <title>{post.title} | RidenTech Blog</title>
                 <meta name="description" content={post.metaDescription || post.excerpt} />

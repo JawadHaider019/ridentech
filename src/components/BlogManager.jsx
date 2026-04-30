@@ -216,7 +216,7 @@ const LinkModal = ({ isOpen, onClose, onInsert }) => {
     >
       <div
         ref={modalRef}
-        className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl border border-gray-200"
+        className="bg-white text-gray-900 rounded-xl max-w-md w-full p-6 shadow-2xl border border-gray-200"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4">
@@ -489,7 +489,7 @@ const DeleteConfirmModal = ({ isOpen, blog, onConfirm, onCancel, isLoading }) =>
     >
       <div
         ref={modalRef}
-        className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl border border-gray-200"
+        className="bg-white text-gray-900 rounded-xl max-w-md w-full p-6 shadow-2xl border border-gray-200"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 mb-4">
@@ -571,7 +571,7 @@ const ViewBlogModal = ({ blog, onClose }) => {
     >
       <div
         ref={modalRef}
-        className="bg-white rounded-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto border border-gray-200"
+        className="bg-white text-gray-900 rounded-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto border border-gray-200"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
@@ -1309,7 +1309,7 @@ const BlogManager = () => {
   }) : [];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white text-gray-900">
       {alerts.map(alert => (
         <Alert key={alert.id} {...alert} onClose={() => { }} />
       ))}
@@ -1475,7 +1475,7 @@ const BlogManager = () => {
                     <div>
                       <label className="text-xs font-medium text-gray-500 block mb-1">Category</label>
                       <select
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-gray-900 bg-white"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-gray-900 bg-white text-gray-900"
                         value={editingBlog?.category || newBlog.category}
                         onChange={(e) => {
                           if (editingBlog) {
@@ -1498,7 +1498,7 @@ const BlogManager = () => {
                       <input
                         type="text"
                         placeholder="Short description"
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900"
                         value={editingBlog?.excerpt || newBlog.excerpt}
                         onChange={(e) => {
                           if (editingBlog) {
@@ -1517,7 +1517,7 @@ const BlogManager = () => {
                       <input
                         type="text"
                         placeholder="Add tag"
-                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900"
                         value={newTag}
                         onChange={(e) => setNewTag(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && addTag()}
@@ -1551,7 +1551,7 @@ const BlogManager = () => {
                     <textarea
                       placeholder="SEO description"
                       rows="2"
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900"
                       value={editingBlog?.metaDescription || newBlog.metaDescription}
                       onChange={(e) => {
                         if (editingBlog) {

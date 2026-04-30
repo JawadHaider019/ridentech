@@ -152,7 +152,7 @@ export default function BlogPage() {
     };
 
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen bg-white text-gray-900">
             <HeroSection
                 title="NEWS & BLOGS"
                 subtitle="Insights, stories, and updates from our team"
