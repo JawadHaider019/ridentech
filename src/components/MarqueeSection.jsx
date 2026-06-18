@@ -1,6 +1,6 @@
 // components/MarqueeService.jsx (Simplified)
 import { useEffect, useRef } from "react";
-import { ArrowRight, Star } from "lucide-react";
+import { Star } from "lucide-react";
 
 const MarqueeService = () => {
   const marqueeRef = useRef(null);

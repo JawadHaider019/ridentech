@@ -1,12 +1,12 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   FiPlus, FiEdit2, FiTrash2, FiImage, FiLink, FiX, FiEye,
   FiSend, FiBold, FiItalic, FiList, FiHash, FiCalendar,
-  FiUser, FiTag, FiUpload, FiEyeOff, FiClock,
+  FiUpload, FiEyeOff, FiClock,
   FiCheckCircle, FiAlertCircle, FiStar, FiSave,
-  FiSearch, FiGlobe, FiHelpCircle, FiPaperclip, FiRefreshCw,
-  FiTable, FiSquare, FiCode, FiGrid, FiCopy, FiUploadCloud
+  FiSearch, FiGlobe, FiHelpCircle, FiRefreshCw,
+  FiTable, FiSquare, FiGrid, FiUploadCloud
 } from 'react-icons/fi';
 import { LuSparkles } from 'react-icons/lu';
 import gsap from 'gsap';
@@ -739,70 +739,6 @@ const BlogCard = ({ blog, onEdit, onDelete, onView, index }) => {
   );
 };
 
-// Dummy data for initial blogs
-const dummyBlogs = [
-  {
-    id: 1,
-    title: 'Getting Started with React',
-    content: 'React is a powerful library for building user interfaces...',
-    excerpt: 'Learn the basics of React in this comprehensive guide.',
-    category: 'Development',
-    tags: ['react', 'javascript', 'frontend'],
-    imageUrl: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800',
-    featured: true,
-    status: 'published',
-    createdAt: new Date(2024, 0, 15).toISOString(),
-    readTime: 5,
-    author: 'Admin',
-    metaDescription: 'Complete guide to getting started with React development'
-  },
-  {
-    id: 2,
-    title: 'UI/UX Design Principles',
-    content: 'Good design is about more than just aesthetics...',
-    excerpt: 'Master the core principles of UI/UX design.',
-    category: 'Design',
-    tags: ['ui', 'ux', 'design'],
-    imageUrl: 'https://images.unsplash.com/photo-1586717791821-3f44a563fa4c?w=800',
-    featured: false,
-    status: 'published',
-    createdAt: new Date(2024, 1, 20).toISOString(),
-    readTime: 4,
-    author: 'Admin',
-    metaDescription: 'Essential UI/UX design principles every designer should know'
-  },
-  {
-    id: 3,
-    title: 'Understanding TypeScript',
-    content: 'TypeScript adds static typing to JavaScript...',
-    excerpt: 'A beginner-friendly introduction to TypeScript.',
-    category: 'Development',
-    tags: ['typescript', 'javascript'],
-    imageUrl: 'https://images.unsplash.com/photo-1516116216624-53e697fedbea?w=800',
-    featured: false,
-    status: 'draft',
-    createdAt: new Date(2024, 2, 5).toISOString(),
-    readTime: 6,
-    author: 'Admin',
-    metaDescription: 'Learn TypeScript from scratch'
-  },
-  {
-    id: 4,
-    title: 'Web Performance Optimization',
-    content: 'Speed matters for user experience and SEO...',
-    excerpt: 'Tips and tricks to make your website faster.',
-    category: 'Tech',
-    tags: ['performance', 'web', 'optimization'],
-    imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800',
-    featured: true,
-    status: 'published',
-    createdAt: new Date(2024, 2, 10).toISOString(),
-    readTime: 7,
-    author: 'Admin',
-    metaDescription: 'Complete guide to web performance optimization'
-  }
-];
-
 // Main BlogManager Component - Frontend only with GSAP
 const BlogManager = () => {
   const [blogs, setBlogs] = useState([]);
@@ -835,7 +771,6 @@ const BlogManager = () => {
   const [featuredImageFile, setFeaturedImageFile] = useState(null);
 
   const textareaRef = useRef(null);
-  const fileInputRef = useRef(null);
   const headerRef = useRef(null);
   const tabsRef = useRef(null);
   const editorRef = useRef(null);
@@ -852,7 +787,7 @@ const BlogManager = () => {
   });
 
   // Fetch blogs from DB
-  const fetchBlogs = async () => {
+  const fetchBlogs = useCallback(async () => {
     setIsLoading(true);
     try {
       const resp = await getPosts();
@@ -877,7 +812,7 @@ const BlogManager = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchBlogs();
@@ -905,7 +840,7 @@ const BlogManager = () => {
         { y: 0, opacity: 1, duration: 0.6, delay: 0.3, ease: "power2.out" }
       );
     }
-  }, []);
+  }, [fetchBlogs]);
 
   const addAlert = (type, message) => {
     const id = Date.now();
@@ -1149,7 +1084,6 @@ const BlogManager = () => {
     }
 
     setIsLoading(true);
-    const token = localStorage.getItem('admin-token');
 
     // Map frontend 'published'/'draft' to default backend 'active'/'inactive' just in case.
     // Also snake_case the keys!

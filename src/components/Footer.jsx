@@ -12,7 +12,6 @@ export default function Footer() {
   const footerRef = useRef(null);
   const contentRef = useRef(null);
   const columnsRef = useRef([]);
-  const socialRefs = useRef([]);
   const newsletterRef = useRef(null);
   const bigLogoRef = useRef(null);
   const privacyLinksRef = useRef(null);
@@ -96,10 +95,12 @@ export default function Footer() {
 
     if (footerRef.current) observer.observe(footerRef.current);
 
+    const targets = [...revealTargets];
+    const logo = bigLogoRef.current;
     return () => {
       observer.disconnect();
-      gsap.killTweensOf([...revealTargets, bigLogoRef.current, ".sparkle-icon"]);
-      gsap.set([...revealTargets, bigLogoRef.current], { clearProps: "all" });
+      gsap.killTweensOf([...targets, logo, ".sparkle-icon"]);
+      gsap.set([...targets, logo], { clearProps: "all" });
     };
   }, [mounted, pathname]);
 
@@ -129,26 +130,6 @@ export default function Footer() {
     }
   };
 
-  // Hover handlers for social icons
-  const handleSocialEnter = (e) => {
-    gsap.to(e.currentTarget, {
-      scale: 1.2,
-      rotate: 5,
-      backgroundColor: "rgba(255,255,255,0.1)",
-      duration: 0.3,
-      ease: "power2.out"
-    });
-  };
-
-  const handleSocialLeave = (e) => {
-    gsap.to(e.currentTarget, {
-      scale: 1,
-      rotate: 0,
-      backgroundColor: "transparent",
-      duration: 0.3,
-      ease: "power2.out"
-    });
-  };
 
   // Hover handlers for links
   const handleLinkEnter = (e) => {

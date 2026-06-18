@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Users, Rocket, Star, Zap, Code, Sparkles, Brain } from "lucide-react";
+import { ArrowRight, Users, Rocket, Star, Zap } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 

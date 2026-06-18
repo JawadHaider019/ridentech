@@ -192,13 +192,14 @@ export default function FAQ() {
 
     }, sectionRef);
 
+    const currentSection = sectionRef.current;
     return () => {
       ctx.revert();
       ScrollTrigger.getAll().forEach(t => {
-        if (t.trigger === sectionRef.current) t.kill(true);
+        if (t.trigger === currentSection) t.kill(true);
       });
     };
-  }, [mounted, sectionRef]);
+  }, [mounted, openIndex]);
 
   const toggleFAQ = (index) => {
     const isAlreadyOpen = openIndex === index;

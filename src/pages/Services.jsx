@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Helmet } from 'react-helmet-async';
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -219,7 +219,7 @@ const services = [
 ];
 
 export default function ServicesPage() {
-    const navigate = useNavigate();
+
     const [mounted, setMounted] = useState(false);
     const [imageErrors, setImageErrors] = useState({});
     const [activeHoverIndex, setActiveHoverIndex] = useState(null);
@@ -351,10 +351,6 @@ export default function ServicesPage() {
 
     const handleMouseLeave = () => {
         // Let the next hover handle reset
-    };
-
-    const handleCardClick = (serviceTitle, serviceId) => {
-        navigate(`/contact?service=${encodeURIComponent(serviceTitle)}&id=${serviceId}`);
     };
 
     useEffect(() => {

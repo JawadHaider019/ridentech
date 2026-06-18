@@ -74,22 +74,6 @@ export default function Blog() {
     };
   };
 
-  const stripHtml = (html) => {
-    if (!html) return "";
-    // First strip markdown-like symbols
-    let text = html
-      .replace(/^#+\s+/gm, '') // headings
-      .replace(/\*\*/g, '')    // bold
-      .replace(/\*/g, '')     // italic
-      .replace(/!\[.*?\]\(.*?\)/g, '') // images
-      .replace(/\[(.*?)\]\(.*?\)/g, '$1') // links
-      .replace(/^- /gm, '')    // bullets
-      .replace(/^\d+\.\s/gm, ''); // numbered lists
-
-    const tmp = document.createElement("DIV");
-    tmp.innerHTML = text;
-    return tmp.textContent || tmp.innerText || "";
-  };
 
   const recentPosts = blogs;
   const pinContainerRef = useRef(null);

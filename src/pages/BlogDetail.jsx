@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Helmet } from 'react-helmet-async';
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Calendar, MessageCircle, Clock, Twitter, Facebook, Linkedin, Copy, Check, User } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, Twitter, Facebook, Linkedin, Copy, Check, User } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { getPublicPost } from '../api/blogApi';

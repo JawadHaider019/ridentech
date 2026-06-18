@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Lightbulb, TrendingUp, Heart, BarChart3, Target, Zap, CheckCircle } from "lucide-react";
+import { ArrowRight, Lightbulb, TrendingUp, Heart, BarChart3, Zap } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -17,7 +17,6 @@ const AboutUs = () => {
   const imageRef = useRef(null);
   const ctaRef = useRef(null);
   const borderLineRef = useRef(null);
-  const contentWrapperRef = useRef(null);
 
   // Features data from your input
   const features = [
@@ -204,10 +203,11 @@ const AboutUs = () => {
       });
     });
 
+    const currentSection = sectionRef.current;
     return () => {
       ctx.revert();
       ScrollTrigger.getAll().forEach(t => {
-        if (t.trigger === sectionRef.current) t.kill(true);
+        if (t.trigger === currentSection) t.kill(true);
       });
     };
   }, [mounted]);

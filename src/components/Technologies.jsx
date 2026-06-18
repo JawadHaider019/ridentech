@@ -5,7 +5,6 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import {
   SiNextdotjs,
   SiReact,
-  SiTypescript,
   SiNodedotjs,
   SiLaravel,
   SiMongodb,
@@ -136,10 +135,11 @@ export default function Technologies() {
       }
     }, sectionRef);
 
+    const currentSection = sectionRef.current;
     return () => {
       ctx.revert();
       ScrollTrigger.getAll().forEach(t => {
-        if (t.trigger === sectionRef.current) t.kill();
+        if (t.trigger === currentSection) t.kill();
       });
     };
   }, [mounted]);

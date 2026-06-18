@@ -108,8 +108,6 @@ export default function Services() {
   const titleRef = useRef(null);
   const subtitleRef = useRef(null);
   const serviceItemsRef = useRef([]);
-  const descriptionsRef = useRef({});
-  const arrowsRef = useRef({});
   const [mounted, setMounted] = useState(false);
 
   // Check if desktop on mount and resize

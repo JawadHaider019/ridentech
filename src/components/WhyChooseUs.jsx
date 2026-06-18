@@ -6,8 +6,6 @@ import {
   Zap,
   Users,
   Clock,
-  BarChart,
-  Award,
   Headphones,
   ArrowRight,
   Sparkles
